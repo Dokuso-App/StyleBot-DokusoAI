@@ -1,6 +1,5 @@
 # Standard library imports
 import os
-from typing import Optional
 
 # Related third-party imports
 import openai
