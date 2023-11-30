@@ -13,23 +13,17 @@ StyleBot-DokusoAI is an advanced chatbot designed for fashion e-commerce. It lev
 
 ## Installation
 
-\```bash
-# Clone the repository
-git clone [repository-url]
+Clone the repository
+```
+git clone https://github.com/Dokuso-App/StyleBot-DokusoAI.git
+```
 
-# Install dependencies
+Install dependencies
+```
 pip install -r requirements.txt
-\```
+```
 
 ## Usage
-Provide a brief guide on how to run the chatbot, including any necessary configuration steps.
-
-\```python
-# Example of how to run the chatbot
-\```
-
-## Contributing
-Instructions for how others can contribute to your project. Encourage contributions and provide guidelines.
-
-## License
-Specify the license under which your project is released.
+```
+panel serve main.py
+```
