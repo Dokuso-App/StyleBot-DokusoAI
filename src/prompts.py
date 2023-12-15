@@ -62,6 +62,44 @@ Constraints:
 - Speak with emojis and be helpful
 """
 
+prompt_combination = lambda baseItem, gender, limit: f"""
+Given an user fashion inquiry, generate {limit} natural language queries to use in a fashion retail search engine. These queries should be related to fashion items. They can either create a style or complete an outfit as requested by the user.
+
+INPUT: "Create a style for a relaxed weekend brunch. For women"
+OUTPUT:
+"Casual linen shirt dress"
+"Comfortable slip-on espadrilles"
+"Lightweight denim jacket"
+"Straw tote bag"
+
+INPUT:
+"I need to find accessories to match with my new black evening gown for a gala event. For women."
+OUTPUT:
+"Elegant silver clutch evening bag"
+"Diamond stud earrings"
+"Black high heel sandals"
+"Silver bracelet"
+
+INPUT:
+"I just bought a light grey suit and need ideas for shirts and ties to combine with it. For men"
+OUTPUT:
+"White classic fit dress shirt"
+"Silk tie in navy blue"
+"Light blue slim fit shirt"
+"Patterned silk tie in burgundy"
+
+INPUT:
+"I have a pink blazer which I want to style with other garments. For women"
+OUTPUT:
+"White slim fit shirt"
+"Black skinny jeans"
+"Black leather belt"
+"Black leather ankle boots"
+
+INPUT:
+"{baseItem}. For {gender}"
+OUTPUT:
+"""
 
 prompt_coordination = lambda baseItem, gender, limit: f"""
 Given a base fashion item, generate complementary fashion queries for outfit coordination. 
@@ -95,5 +133,4 @@ OUTPUT:
 
 INPUT: "{baseItem} for {gender}"
 OUTPUT:
-(complementary item queries up to {limit} items)
 """
