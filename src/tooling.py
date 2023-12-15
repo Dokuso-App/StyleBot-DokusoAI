@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List, Dict
 import requests
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
@@ -11,7 +11,7 @@ from base64 import b64encode
 from PIL import Image
 import requests
 from .schemas import *
-from .prompts import prompt_coordination
+from .prompts import prompt_coordination, prompt_combination
 
 
 baseUrl = 'https://clipfashion-gr7fp45wya-uc.a.run.app/api/v1'
@@ -67,13 +67,19 @@ def resume_item_data(item):
     Returns:
     dict: A dictionary containing only the relevant information about the item.
     """
+    # img = read_image(item['img_url'])
+    # if  img:
+    #     b = BytesIO()
+    #     # img.save(b, format='png')
+    # else:
+    #     b = None
     return {
         'itemId': item['id'], #only for internal use,
         'name': item['name'],
         'description': item['desc_1'],
         'price': str(round(item['price'], 0))+item['currency'],
         'discount': str(round(item['discount_rate'], 0)*100)+'%',
-        # 'imgUrl': item['img_url'], #+'?w=200&h=200&fit=crop&auto=format&q=80&cs=tinysrgb&crop='
+        'imgUrl': item['img_url'],
         'brand': item['brand'],
         'category': item['category'],
         'shopLink': item['shop_link'],
@@ -86,8 +92,8 @@ def search_items(query: str,
                  maxPrice: Optional[float] = None, 
                  category: str = None, 
                  onSale: Optional[bool] = None, 
-                 brands: Optional[str] = None,
-                 limit: int = 5) -> list[dict]:
+                 brands: Optional[List[AllowedBrands]] = None,
+                 limit: int = 5) -> List[dict]:
     """
     Useful for whe you need to search for items in the Dokuso database using DOKUSO API based on various criteria. All arguments are required.
 
@@ -96,7 +102,7 @@ def search_items(query: str,
     maxPrice (float): Maximum price of items to retrieve.
     category (str): Category of the items ('women', 'men', 'kids', 'home').
     onSale (bool): Whether to search for items on sale.
-    brands (str: Brand of the items ('zara', 'massimo dutti', 'mango', 'h&m', 'bershka').
+    brands (list): Brands of the items ('zara', 'massimo dutti', 'mango', 'h&m', 'bershka').
     limit (int: Number of items to retrieve.)
 
     Returns:
@@ -104,13 +110,14 @@ def search_items(query: str,
     """
 
     total_results = []
-    image_batch  = []
+
     params = {
         'query': query,
         'maxPrice': maxPrice,
         'category': category,
         'onSale': onSale,
-        'brands':  ','.join(brands.split()) if brands else None,
+        'brands':  ','.join([b.name for b in brands]) if brands else None,
+        # 'brands':  ','.join(brands) if brands else None,
         'limit': limit
     }
     url = f'{baseUrl}/search'
@@ -118,14 +125,13 @@ def search_items(query: str,
     if response.status_code == 200:
         results = response.json().get('results', [])
         for item in results:
-            image_batch.append(item['img_url'])
             item = resume_item_data(item)
             total_results.append(item)
     else:
         print(f'Error retrieving results for "{query}"')
         print(response.text)
         
-    display_result(image_batch)
+    # display_result(image_batch)
     return total_results
 
 @tool(args_schema=SearchCombinationInput)
@@ -134,7 +140,7 @@ def search_combination(userRequest: str,
                         maxPrice: Optional[float] = None, 
                         category: str = None, 
                         onSale: Optional[bool] = None, 
-                        brands: Optional[str] = None) -> list[dict]:
+                        brands: Optional[List[AllowedBrands]] = None) -> List[dict]:
                         
     """
     Useful for when you need to create a specific style or to complete an outfit requested by the user.
@@ -153,7 +159,7 @@ def search_combination(userRequest: str,
 
     total_results = []
     total_images  = []
-    queries = generate_fashion_queries(userRequest, category, 4)
+    queries = generate_fashion_queries_for_combination(userRequest, category, count)
     for q in queries[:4]:
         print(f'Retrieving results for "{q}"')
         params = {
@@ -161,7 +167,7 @@ def search_combination(userRequest: str,
             'maxPrice': maxPrice,
             'category': category,
             'onSale': onSale,
-            'brands': ','.join(brands.split()) if brands else None,
+            'brands':  ','.join([b.name for b in brands]) if brands else None,
             'limit': 1
         }
         url = f'{baseUrl}/search'
@@ -175,7 +181,7 @@ def search_combination(userRequest: str,
         else:
             print(f'Error retrieving results for "{q}"')
             print(response.text)
-    display_result(total_images)
+    # display_result(total_images)
     return total_results
 
 
@@ -183,51 +189,15 @@ def search_combination(userRequest: str,
 tagging_functions = [convert_pydantic_to_openai_function(FashionQueriesGenerator)]
     
 
-def generate_fashion_queries(userRequest: str, category, count):
-
-    desc = f"""Given an user fashion inquiry, generate {count} natural language queries to use in a fashion retail search engine. These queries should be related to fashion items. They can either create a style or complete an outfit as requested by the user.
-
-            INPUT: "Create a style for a relaxed weekend brunch. For women"
-            OUTPUT:
-            "Casual linen shirt dress"
-            "Comfortable slip-on espadrilles"
-            "Lightweight denim jacket"
-            "Straw tote bag"
-
-            INPUT:
-            "I need to find accessories to match with my new black evening gown for a gala event. For women."
-            OUTPUT:
-            "Elegant silver clutch evening bag"
-            "Diamond stud earrings"
-            "Black high heel sandals"
-            "Silver bracelet"
-            
-            INPUT:
-            "I just bought a light grey suit and need ideas for shirts and ties to combine with it. For men"
-            OUTPUT:
-            "White classic fit dress shirt"
-            "Silk tie in navy blue"
-            "Light blue slim fit shirt"
-            "Patterned silk tie in burgundy"
-
-            INPUT:
-            "I have a pink blazer which I want to style with other garments. For women"
-            OUTPUT:
-            "White slim fit shirt"
-            "Black skinny jeans"
-            "Black leather belt"
-            "Black leather ankle boots"
-
-            INPUT:
-            "{userRequest}. For {category}"
-            OUTPUT:
-        """
+def generate_fashion_queries_for_combination(userRequest: str, category, count):
     
     model = ChatOpenAI(temperature=0)
     prompt = ChatPromptTemplate.from_messages([
         ("system", "Think carefully, and then tag the text as instructed"),
         ("user", "{input}")
     ])
+
+    desc = prompt_combination(userRequest, category, count)
     tagging_functions[0]['parameters']['properties']['queries']['description'] = desc
     model_with_functions = model.bind(
         functions=tagging_functions,
@@ -243,7 +213,7 @@ def generate_fashion_queries(userRequest: str, category, count):
 
 
 @tool(args_schema=ItemId)
-def get_product_details(itemId:str)->list[dict]:
+def get_product_details(itemId:str)->List[dict]:
     """
     Useful for when you answer questions about a specific product using its item_id.
 
@@ -259,7 +229,7 @@ def get_product_details(itemId:str)->list[dict]:
 
 
 @tool(args_schema=ItemId)
-def find_similar_products(itemId:str)->list[dict]:
+def find_similar_products(itemId:str)->List[dict]:
     """
     Useful for when you need to find products similar to the specified item in the Dokuso database.
 
@@ -276,9 +246,11 @@ def find_similar_products(itemId:str)->list[dict]:
 
 @tool(args_schema=CoordinateOutfitInput)
 def coordinate_outfit(baseItem: str, 
-                      includeAccessories: bool = True, 
+                      includeAccessories: bool = False, 
                       gender: Optional[str] = None,
-                      limit: int = 3) -> list[dict]:
+                      brands: Optional[List[AllowedBrands]] = None,
+                      countOutfits: int = 3,
+                      limit: int = 5) -> Dict[str, List[dict]]:
     """
     Provides assistance in coordinating outfits, including matching colors, styles, and accessories.
 
@@ -286,23 +258,27 @@ def coordinate_outfit(baseItem: str,
     baseItem (str): A base item or color/style to start with for the outfit coordination.
     includeAccessories (bool): Whether to include accessories in the suggestions.
     gender (str): Gender for which the outfit is intended.
-    limit (int): Number of items to suggest for the outfit coordination.
+    countOutfits (int): Number of outits to suggest.
+    limit (int): Number of items to suggest in each outfit.
 
     Returns:
-    list[dict]: A list of coordinated outfit items.
+    List[dict]: A list of coordinated outfit items.
     """
 
     # Generate fashion queries based on the base item
     queries = generate_fashion_queries_for_coordination(baseItem, includeAccessories, gender, limit)
 
     # Collect results from all queries
-    total_results = []
+    total_results = {f'outfit {i}': [] for i in range(countOutfits)}
+    # total_results = []
+    visited = []
     for query in queries:
-        print(query)
+        print('Query:', query)
         params = {
             'query': query,
             'category': gender,
-            'limit': 1  # Limiting to 1 item per query for variety
+            'brands':  ','.join([b.name for b in brands]) if brands else None,
+            'limit': countOutfits 
         }
         url = f'{baseUrl}/search'
         response = requests.get(url, params=params)
@@ -310,11 +286,16 @@ def coordinate_outfit(baseItem: str,
         if response.status_code == 200:
             results = response.json().get('results', [])
             if results:
-                total_results.append(resume_item_data(results[0]))
+                for i in range(countOutfits):
+                    item = resume_item_data(results[i])
+                    total_results[f'outfit {i}'].append(resume_item_data(results[i]))
+                    # item['outfit'] = i
+                    # total_results.append(item)
+                    visited.append(results[i]['id'])
         else:
             print(f'Error retrieving coordinated items for "{query}"')
             print(response.text)
-
+    
     return total_results
 
 
@@ -329,11 +310,11 @@ def generate_fashion_queries_for_coordination(baseItem, includeAccessories, gend
     limit (int): Number of queries to generate.
 
     Returns:
-    list[str]: A list of generated queries.
+    List[str]: A list of generated queries.
     """
 
 
-    model = ChatOpenAI(temperature=0.7) # Adjust temperature as needed for creativity vs relevance
+    model = ChatOpenAI(temperature=0.1) # Adjust temperature as needed for creativity vs relevance
     prompt = ChatPromptTemplate.from_messages([
         ("system", "Think creatively and generate complementary fashion queries."),
         ("user", "{input}")
@@ -364,30 +345,30 @@ def generate_accessory_queries(remaining_limit):
     remaining_limit (int): Remaining number of queries to generate.
 
     Returns:
-    list[str]: A list of accessory queries.
+    List[str]: A list of accessory queries.
     """
     accessories = ['belt', 'watch', 'necklace', 'earrings', 'hat']
     return accessories[:remaining_limit]
 
 
 @tool(args_schema=StyleDiscoveryInput)
-def discover_personal_style(userPreferences: list[str], 
+def discover_personal_style(userPreferences: List[str], 
                             lifestyle: str, 
-                            favoriteColors: list[str],
-                            dislikedItems: list[str] = [],
-                            limit: int = 5) -> list[dict]:
+                            favoriteColors: List[str],
+                            dislikedItems: List[str] = [],
+                            limit: int = 5) -> List[dict]:
     """
     Discovers and suggests personal style options based on user's preferences, lifestyle, and color choices.
 
     Parameters:
-    userPreferences (list[str]): User's style preferences and interests.
+    userPreferences (List[str]): User's style preferences and interests.
     lifestyle (str): The user's lifestyle or typical activities.
-    favoriteColors (list[str]): User's favorite colors.
-    dislikedItems (list[str]): Items or styles the user dislikes.
+    favoriteColors (List[str]): User's favorite colors.
+    dislikedItems (List[str]): Items or styles the user dislikes.
     limit (int): Number of style suggestions to retrieve.
 
     Returns:
-    list[dict]: A list of style suggestions that align with the user's preferences.
+    List[dict]: A list of style suggestions that align with the user's preferences.
     """
     
     # Construct the query for style discovery
