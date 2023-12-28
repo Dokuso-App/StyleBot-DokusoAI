@@ -29,13 +29,15 @@ import { DefaultQuestion } from "./DefaultQuestion";
 
 type RetrieverName = "tavily" | "kay" | "you" | "google" | "kay_press_release";
 // Super simple sanitizer
-function sanitize(str) {
+function sanitize(str: string): string {
+  // Add your sanitization logic here
   return str.replace(/&<"/g, function (m) {
-      if (m === "&") return "&amp;"
-      if (m === "<") return "&lt;"
-      return "&quot;"
-  })
+    if (m === "&") return "&amp;";
+    if (m === "<") return "&lt;";
+    return "&quot;";
+  });
 }
+
 export function ChatWindow(props: {
   apiBaseUrl: string;
   placeholder?: string;
@@ -288,7 +290,7 @@ export function ChatWindow(props: {
         <div className="text-white flex flex-wrap items-center mt-4">
           <div className="flex items-center mb-2">
             <span className="shrink-0 mr-2">Powered by</span>
-            Dokusō
+            <a href='https://dokuso.app/'>Dokusō</a>
             {/* <Select
               value={retriever}
               onChange={(e) => {
