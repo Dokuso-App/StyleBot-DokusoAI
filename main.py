@@ -1,119 +1,53 @@
 """Main entrypoint for the app."""
-
 # Standard library imports
+import asyncio
 import os
+from operator import itemgetter
+from typing import List, Optional, Tuple, Union
+from uuid import UUID
 
 # Related third-party imports
 import openai
-import panel as pn
-import param
-from dotenv import load_dotenv, find_dotenv
+import langsmith
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
+# Local application/library specific imports
 from langchain.agents import AgentExecutor
 from langchain.agents.format_scratchpad import format_to_openai_functions
 from langchain.agents.output_parsers import OpenAIFunctionsAgentOutputParser
-from langchain.chat_models import ChatOpenAI
-from langchain.memory import (ConversationBufferMemory, 
-                            ConversationBufferWindowMemory, 
-                            ConversationKGMemory)
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
-from langchain.schema.runnable import RunnablePassthrough
-from langchain.tools.render import format_tool_to_openai_function
-
-# Local application/library specific imports
-from src.tooling import (search_items,
-                        search_combination, 
-                        coordinate_outfit,
-                        discover_personal_style,
-                        find_similar_products, 
-                        list_brands)
-
-from src.prompts import *
-
-
-import asyncio
-from operator import itemgetter
-from typing import List, Optional, Sequence, Tuple, Union
-import openai
-import langsmith
-from fastapi import FastAPI, Request, Depends
-from fastapi.middleware.cors import CORSMiddleware
 from langchain.chat_models import ChatAnthropic, ChatOpenAI, ChatVertexAI
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-
-from langchain.schema import Document
-from langchain.schema.document import Document
+from langchain.globals import set_debug
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
 from langchain.schema.language_model import BaseLanguageModel
 from langchain.schema.messages import AIMessage, HumanMessage
-from langchain.schema.output_parser import StrOutputParser
-from langchain.schema.retriever import BaseRetriever
 from langchain.schema.runnable import (
-    ConfigurableField,
-    Runnable,
-    RunnableLambda,
-    RunnableMap,
-)
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-
-# Backup
-from langchain.utilities import GoogleSearchAPIWrapper
-from langserve import add_routes
-from langsmith import Client
-from pydantic import BaseModel, Field
-from uuid import UUID
-import asyncio
-import os
-from operator import itemgetter
-from typing import List, Optional, Sequence, Tuple, Union
-
-import langsmith
-from fastapi import FastAPI, Request, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from langchain.callbacks.manager import CallbackManagerForRetrieverRun
-from langchain.chat_models import ChatAnthropic, ChatOpenAI, ChatVertexAI
-from langchain.document_loaders import AsyncHtmlLoader
-from langchain.document_transformers import Html2TextTransformer
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
-from langchain.retrievers import (
-    ContextualCompressionRetriever,
-    TavilySearchAPIRetriever,
-)
-from langchain.retrievers.document_compressors import (
-    DocumentCompressorPipeline,
-    EmbeddingsFilter,
-)
-from langchain.retrievers.kay import KayAiRetriever
-# from langchain.retrievers.you import YouRetriever
-from langchain.schema import Document
-from langchain.schema.document import Document
-from langchain.schema.language_model import BaseLanguageModel
-from langchain.schema.messages import AIMessage, HumanMessage
-from langchain.schema.output_parser import StrOutputParser
-from langchain.schema.retriever import BaseRetriever
-from langchain.schema.runnable import (
-    ConfigurableField,
     Runnable,
     RunnableBranch,
     RunnableLambda,
     RunnableMap,
+    RunnablePassthrough
 )
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-
-# Backup
+from langchain.tools.render import format_tool_to_openai_function
 from langchain.utilities import GoogleSearchAPIWrapper
 from langserve import add_routes
-from langsmith import Client
-from pydantic import BaseModel, Field
-from uuid import UUID
+from src.prompts import *
+from src.tooling import (
+    search_items,
+    coordinate_outfit,
+    discover_personal_style,
+    find_similar_products, 
+    list_brands
+)
 
-from langchain.globals import set_debug
 
 set_debug(True)
 
 tools = [
     search_items,
-    search_combination,
+    # search_combination,
     coordinate_outfit,
     discover_personal_style,
     find_similar_products,
@@ -319,7 +253,7 @@ def create_chain(
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-os.environ['OPENAI_API_KEY'] = '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'
+os.environ['OPENAI_API_KEY'] = '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'
 openai.api_key = os.environ['OPENAI_API_KEY']
 
 
