@@ -23,7 +23,7 @@ class SearchItemsQueryInput(BaseModel):
 
 class SearchCombinationInput(BaseModel):
     userRequest: str = Field(..., description="User intention")
-    count: Optional[int] = Field(3, description="Number of queries to generate")
+    countQueries: Optional[int] = Field(3, description="Number of queries to generate")
     maxPrice: Optional[float] = Field(None, description="Maximum price of items to retrieve. If not mentioned None is used.")
     category: str = Field(None, description="Category of the items to retrieve. If not mentioned None is used.", enum=['women', 'men', 'home', 'kids'])
     onSale: Optional[bool] = Field(None, description="Whether to search for items on sale. If not mentioned None is used.")
