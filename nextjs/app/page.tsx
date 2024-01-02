@@ -12,8 +12,9 @@ export default function Home() {
       <ChatWindow
         apiBaseUrl={
           process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080"
+          // 'https://stylebot.fly.dev'
         }
-        titleText="StyleBot"
+        titleText="StyleBot 🛍️"
         placeholder="Ask me anything about fashion!"
       ></ChatWindow>
     </ChakraProvider>
