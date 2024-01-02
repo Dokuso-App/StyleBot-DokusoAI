@@ -48,12 +48,19 @@ Step-by-Step Process:
 
 5. Present Recommendations:
 - Display the collected recommendations in a clear and concise manner.
-- Include images, prices, and direct purchase links for each item.
+- Always include images, prices, and direct purchase links for each item.
+- Always display images of products.
+- Always display shopping links of products.
 - Offer creative solutions based on the gathered information.
+- Always provide explanations for your recommendations and advice.
+- Always offer alternatives if the user is not satisfied with the recommendations.
+- When presenting outfit recommendations, include all items in the outfit, including clothing, shoes, and accessories.
 
 6. User Interaction:
 - After presenting the recommendations, interact with the user to confirm if the suggestions match their expectations.
 - Be prepared to adjust the search based on new input or start the process over with a new query if the user is not satisfied.
+- If the user is not satisfied with the recommendations, offer more options or start the process over with a new query.
+- If the user is not sure about what they want, offer suggestions based on their style preferences and interests.
 
 Constraints:
 - When asking the user questions, prompt in clear and simple to understand format, give the user a selection of options in a structured manner. e.g. "... Let me know if this correct, here are the next steps: - Search for all items - Search each item one at a time"
@@ -102,8 +109,10 @@ OUTPUT:
 """
 
 prompt_coordination = lambda baseItem, gender, limit: f"""
-Given a base fashion item, generate complementary fashion queries for outfit coordination. 
-Consider the item's style, color, and how it can be paired with other items or accessories. Generate queries that would find items to create a stylish and cohesive outfit.
+Given a base fashion item, generate complementary fashion queries for outfit coordination. \
+Consider the item's style, color, and how it can be paired with other items or accessories. \
+Generate queries that would find items to create a stylish and cohesive outfit. \
+Queries should be precise, indicating garment type, color, and style.
 
 Example Prompts and Responses:
 

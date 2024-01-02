@@ -56,7 +56,7 @@ def list_brands():
     return response.json()['brand_list']
 
 
-def resume_item_data(item):
+def create_item_data(item):
     """
     Given an item dictionary, this function returns a new dictionary containing only the relevant information
     about the item.
@@ -67,14 +67,8 @@ def resume_item_data(item):
     Returns:
     dict: A dictionary containing only the relevant information about the item.
     """
-    # img = read_image(item['img_url'])
-    # if  img:
-    #     b = BytesIO()
-    #     # img.save(b, format='png')
-    # else:
-    #     b = None
     return {
-        'itemId': item['id'], #only for internal use,
+        'itemId': item['id'],
         'name': item['name'],
         'description': item['desc_1'],
         'price': str(round(item['price'], 0))+item['currency'],
@@ -82,7 +76,8 @@ def resume_item_data(item):
         'imgUrl': item['img_url'],
         'brand': item['brand'],
         'category': item['category'],
-        'shopLink': item['shop_link'],
+        # 'shopLink': item['shop_link'],
+        'shopLink': 'https://dokuso.app/us/en/results/explore/'+'-'.join(item['name'].split(' '))+f'%20{item["id"]}',
         'onSale': item['sale']
     }
 
@@ -125,7 +120,7 @@ def search_items(query: str,
     if response.status_code == 200:
         results = response.json().get('results', [])
         for item in results:
-            item = resume_item_data(item)
+            item = create_item_data(item)
             total_results.append(item)
     else:
         print(f'Error retrieving results for "{query}"')
@@ -136,10 +131,11 @@ def search_items(query: str,
 
 @tool(args_schema=SearchCombinationInput)
 def search_combination(userRequest: str, 
-                        count: Optional[int] = 3,
+                        countQueries: Optional[int] = 3,
                         maxPrice: Optional[float] = None, 
                         category: str = None, 
                         onSale: Optional[bool] = None, 
+                        limit: Optional[int] = 5,
                         brands: Optional[List[AllowedBrands]] = None) -> List[dict]:
                         
     """
@@ -147,10 +143,11 @@ def search_combination(userRequest: str,
 
     Parameters:
     userRequest (str): User request.
-    count (int): Number of queries to generate.
+    countQueries (int): Number of queries to generate.
     maxPrice (float): Maximum price of items to retrieve.
     category (str): Category of the items ('women', 'men', 'kids', 'home').
     onSale (bool): Whether to search for items on sale.
+    limit (int): Number of items to retrieve.
     brands (str: Brand of the items ('zara', 'massimo dutti', 'mango', 'h&m', 'bershka').
 
     Returns:
@@ -159,7 +156,7 @@ def search_combination(userRequest: str,
 
     total_results = []
     total_images  = []
-    queries = generate_fashion_queries_for_combination(userRequest, category, count)
+    queries = generate_fashion_queries_for_combination(userRequest, category, countQueries)
     for q in queries[:4]:
         print(f'Retrieving results for "{q}"')
         params = {
@@ -168,7 +165,7 @@ def search_combination(userRequest: str,
             'category': category,
             'onSale': onSale,
             'brands':  ','.join([b.name for b in brands]) if brands else None,
-            'limit': 1
+            'limit': limit
         }
         url = f'{baseUrl}/search'
         response = requests.get(url, params=params)
@@ -176,7 +173,7 @@ def search_combination(userRequest: str,
             results = response.json().get('results', [])
             for item in results:
                 total_images.append(item['img_url'])
-                item = resume_item_data(item)
+                item = create_item_data(item)
                 total_results.append(item)
         else:
             print(f'Error retrieving results for "{q}"')
@@ -231,10 +228,10 @@ def get_product_details(itemId:str)->List[dict]:
 @tool(args_schema=ItemId)
 def find_similar_products(itemId:str)->List[dict]:
     """
-    Useful for when you need to find products similar to the specified item in the Dokuso database.
+    Useful for when you need to find products similar to the specified itemId in the Dokuso database.
 
     Parameters:
-    item_id (str): The unique identifier of the item to find similar products for.
+    itemId (str): The unique identifier of the item to find similar products for.
 
     Returns:
     list: A list of item dictionaries similar to the specified item.
@@ -270,7 +267,6 @@ def coordinate_outfit(baseItem: str,
 
     # Collect results from all queries
     total_results = {f'outfit {i}': [] for i in range(countOutfits)}
-    # total_results = []
     visited = []
     for query in queries:
         print('Query:', query)
@@ -287,10 +283,8 @@ def coordinate_outfit(baseItem: str,
             results = response.json().get('results', [])
             if results:
                 for i in range(countOutfits):
-                    item = resume_item_data(results[i])
-                    total_results[f'outfit {i}'].append(resume_item_data(results[i]))
-                    # item['outfit'] = i
-                    # total_results.append(item)
+                    item = create_item_data(results[i])
+                    total_results[f'outfit {i}'].append(item)
                     visited.append(results[i]['id'])
         else:
             print(f'Error retrieving coordinated items for "{query}"')
@@ -383,7 +377,7 @@ def discover_personal_style(userPreferences: List[str],
 
     if response.status_code == 200:
         results = response.json().get('results', [])
-        return [resume_item_data(item) for item in results]
+        return [create_item_data(item) for item in results]
     else:
         print(f'Error retrieving style suggestions for user preferences')
         print(response.text)
